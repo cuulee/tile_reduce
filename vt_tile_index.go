@@ -5,7 +5,7 @@ import (
 	"vector-tile/2.1"
 	//"os"
 	//"strings"
-	"fmt"
+	//"fmt"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"log"
@@ -21,11 +21,11 @@ func Read_Vector_Tile_Index(filename string) map[string][]Yrow {
 	}
 
 	values := tile.Layers[0].Values
-	fmt.Print(len(values))
+	//fmt.Print(len(values))
 	features := tile.Layers[0].Features
 	tilemap := map[string][]Yrow{}
-	for i, feat := range features {
-		fmt.Print(i, len(features), feat, "\n")
+	for _, feat := range features {
+		//fmt.Print(i, len(features), feat, "\n")
 		//fmt.Print(feat, "\n")
 		ghash := values[feat.Tags[0]].GetStringValue()
 
@@ -35,11 +35,11 @@ func Read_Vector_Tile_Index(filename string) map[string][]Yrow {
 		tge := []uint32{}
 		yrows := []Yrow{}
 
-		fmt.Print(len(geoms), "\n")
+		//fmt.Print(len(geoms), "\n")
 		// getting geometries in 3s
 		if len(geoms) == 3 {
 			// do shit
-			fmt.Print(geoms)
+			//fmt.Print(geoms)
 			aa := Yrow{Range: []float64{values[geoms[0]].GetDoubleValue(), values[geoms[1]].GetDoubleValue()}, Area: values[geoms[2]].GetStringValue()}
 			yrows = []Yrow{aa}
 		} else {
@@ -47,7 +47,7 @@ func Read_Vector_Tile_Index(filename string) map[string][]Yrow {
 				tge = append(tge, g)
 
 				if len(tge) == 3 {
-					fmt.Print(tge, "\n")
+					//fmt.Print(tge, "\n")
 					// do shit
 					yrows = append(yrows, Yrow{Range: []float64{values[tge[0]].GetDoubleValue(), values[tge[1]].GetDoubleValue()}, Area: values[tge[2]].GetStringValue()})
 

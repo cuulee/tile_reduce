@@ -61,13 +61,59 @@ func Make_Layer_Xmap(tilemap map[m.TileID][]int, layer []l.Polygon) []Tile_Xmap 
 			if count == progress {
 				count = 0
 				total += progress
-				//fmt.Printf("[%d/%d]\n", total, len(tilemap))
+				fmt.Printf("[%d/%d]\n", total, len(tilemap))
 
 			}
 			xmaps = append(xmaps, msg1)
 			count += 1
 
 		}
+	}
+	return xmaps
+}
+
+// Given two slices containg two different geographic layers
+// returns 1 slice representing the two layers in which there are split into
+// smaller polygons for creating hiearchies e.g. slicing zip codes about counties
+func Make_Layer_Xmap_Write(tilemap map[m.TileID][]int, layer []l.Polygon) []Tile_Xmap {
+	// creating channel
+	c := make(chan string)
+	counter := 0
+	totalcount := 0
+	xmaps := []Tile_Xmap{}
+
+	// iterating through each value in tilemap
+	for k, v := range tilemap {
+		finds := []l.Polygon{}
+
+		// getting the polygons corresponding to the tileid
+		for _, i := range v {
+			finds = append(finds, layer[i])
+		}
+
+		go func(k m.TileID, finds []l.Polygon, c chan<- string) {
+			xtile := Make_Layer_Rect_Xmap(k, finds)
+			//fmt.Print("tiles/"+m.Tilestr(xtile.Tile)+".pbf", "\n")
+			Make_Vector_Tile_Index(xtile.Xmap, "tiles/"+strings.Replace(m.Tilestr(xtile.Tile), "/", "_", -1)+".pbf")
+			c <- string("")
+		}(k, finds, c)
+
+		if (counter == 250) || (len(tilemap)-1 == totalcount) {
+			// iterating through each recieved channel output
+			fmt.Printf("[%d/%d]\n", totalcount, len(tilemap))
+			count := 0
+			for count < counter {
+				select {
+				case msg1 := <-c:
+					fmt.Print(msg1)
+				}
+				count += 1
+			}
+			counter = 0
+		}
+		totalcount += 1
+		counter += 1
+
 	}
 	return xmaps
 }

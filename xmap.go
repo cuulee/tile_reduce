@@ -25,7 +25,7 @@ package tile_reduce
 
 import (
 	//"fmt"
-	//"fmt"
+	"fmt"
 	geo "github.com/paulmach/go.geo"
 	"math"
 	"math/rand"
@@ -289,8 +289,9 @@ func Make_Xmap(coords [][]float64, areastring string, bds m.Extrema) map[string]
 
 // fixes the holes
 func fix_holes(xmaptotal map[string][]Yrow) map[string][]Yrow {
-	newlist := [][]int{}
 	for k, v := range xmaptotal {
+		newlist := [][]int{}
+
 		for ii, testhole := range v {
 			boolval := false
 			pos := 0
@@ -301,13 +302,20 @@ func fix_holes(xmaptotal map[string][]Yrow) map[string][]Yrow {
 				}
 			}
 			if boolval == true {
-				newlist = append(newlist, []int{ii, pos})
+				if (ii < len(v)) && (pos < len(v)) {
+					newlist = append(newlist, []int{ii, pos})
+				}
 			}
 		}
 
 		for _, row := range newlist {
-			v[row[0]].Range[1] = v[row[1]].Range[0]
-			v[row[1]].Range[0] = v[row[0]].Range[1]
+			if len(row) == 2 {
+				fmt.Print(row)
+				if (len(v[row[0]].Range) == 2) && (len(v[row[1]].Range) == 2) {
+					v[row[0]].Range[1] = v[row[1]].Range[0]
+					v[row[1]].Range[0] = v[row[0]].Range[1]
+				}
+			}
 		}
 		xmaptotal[k] = v
 
