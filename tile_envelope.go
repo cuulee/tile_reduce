@@ -186,7 +186,7 @@ func envelope_polygon(polygon l.Polygon, size int, intval int, tilemap map[m.Til
 }
 
 // makes the tile polygon
-func make_tile_poly(tile m.TileID) pc.Polygon {
+func Make_Tile_Poly(tile m.TileID) pc.Polygon {
 	bds := m.Bounds(tile)
 	return pc.Polygon{{pc.Point{bds.E, bds.N}, pc.Point{bds.W, bds.N}, pc.Point{bds.W, bds.S}, pc.Point{bds.E, bds.S}}}
 }

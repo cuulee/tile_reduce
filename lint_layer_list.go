@@ -3,7 +3,6 @@ package tile_reduce
 import (
 	l "layersplit"
 	pc "polyclip"
-	"strings"
 )
 
 // Overlaps returns whether r1 and r2 have a non-empty intersection.
@@ -110,14 +109,11 @@ func Lint_Layer_Polygons(layer []l.Polygon) [][]string {
 		if len(i.Polygon) > 1 {
 			newpolygons := Lint_Polygons(i.Polygon)
 			for _, poly := range newpolygons {
-				val := strings.Replace(i.Area, ":", "_", 10)
-				val = strings.Replace(i.Area, ",", "_", 10)
-				newlayer = append(newlayer, []string{val, l.Make_Each_Polygon(poly)})
+
+				newlayer = append(newlayer, []string{i.Area, l.Make_Each_Polygon(poly)})
 			}
 		} else {
-			val := strings.Replace(i.Area, ":", "_", 10)
-			val = strings.Replace(i.Area, ",", "_", 10)
-			newlayer = append(newlayer, []string{val, l.Make_Each_Polygon(i.Polygon)})
+			newlayer = append(newlayer, []string{i.Area, l.Make_Each_Polygon(i.Polygon)})
 		}
 	}
 	return newlayer
