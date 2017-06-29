@@ -17,6 +17,9 @@ Updates: So this module is still like really under construction and supports a f
 
 The annoying part isn't the question of how do I write this its what should be where some functions probably shoulld be abstracted out into others. Fuck it, heres what each module does right now:
 
+Design Notes So I don't forget:
+* This module is designed from the top - all the way down. (see above) So basically any operation you do will be on a Layer or Layers which can be described as a uniform list of either Lines or Polygons thats not to say this operations can be combined or matched together but rather just be aware this project is meant to take in a bulk dataset and churn through. 
+
 ### File Structure
 * xmap.go - Does the ray - casting manipulations and combinitions on all the polygons within a tile.
 * vt_tile_index.go - does the read in and write outs of vector tile pbfs representing the polygon_index.
