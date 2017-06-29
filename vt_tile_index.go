@@ -24,29 +24,18 @@ func Read_Vector_Tile_Index(filename string) map[string][]Yrow {
 	fmt.Print(len(values))
 	features := tile.Layers[0].Features
 	tilemap := map[string][]Yrow{}
-<<<<<<< HEAD
 	for i, feat := range features {
 		fmt.Print(i, len(features), feat, "\n")
 		//fmt.Print(feat, "\n")
 		ghash := values[feat.Tags[0]].GetStringValue()
-=======
-	tge := []uint32{}
-	yrows := []Yrow{}
-	for _, feat := range features {
-		//fmt.Print(feat, "\n")
-		ghash := values[feat.Tags[1]].GetStringValue()
->>>>>>> origin/master
 
 		// getting geometries
 		geoms := feat.Geometry
 
-<<<<<<< HEAD
 		tge := []uint32{}
 		yrows := []Yrow{}
 
 		fmt.Print(len(geoms), "\n")
-=======
->>>>>>> origin/master
 		// getting geometries in 3s
 		if len(geoms) == 3 {
 			// do shit
@@ -58,14 +47,9 @@ func Read_Vector_Tile_Index(filename string) map[string][]Yrow {
 				tge = append(tge, g)
 
 				if len(tge) == 3 {
-<<<<<<< HEAD
 					fmt.Print(tge, "\n")
 					// do shit
 					yrows = append(yrows, Yrow{Range: []float64{values[tge[0]].GetDoubleValue(), values[tge[1]].GetDoubleValue()}, Area: values[tge[2]].GetStringValue()})
-=======
-					// do shit
-					yrows = append(yrows, Yrow{Range: []float64{values[geoms[0]].GetDoubleValue(), values[geoms[1]].GetDoubleValue()}, Area: values[geoms[2]].GetStringValue()})
->>>>>>> origin/master
 
 					tge = []uint32{}
 				}
@@ -80,11 +64,7 @@ func Read_Vector_Tile_Index(filename string) map[string][]Yrow {
 // it is then written to a pbf mapbox vector tile
 func Make_Vector_Tile_Index(tilemap map[string][]Yrow, outfilename string) {
 	// getting the keys that will be used
-<<<<<<< HEAD
 	//keys := []string{"GEOHASH"}
-=======
-	keys := []string{"GEOHASH"}
->>>>>>> origin/master
 
 	// creating the tile values slice
 	tile_values := []*vector_tile.Tile_Value{}
@@ -153,13 +133,8 @@ func Make_Vector_Tile_Index(tilemap map[string][]Yrow, outfilename string) {
 	feat_type := vector_tile.Tile_POLYGON
 	for k, v := range tilemap {
 		feat := vector_tile.Tile_Feature{}
-<<<<<<< HEAD
 		feat.Tags = []uint32{uint32(stringmap[k])} // this takes of geohash / the geohash value
 		feat.Type = &feat_type                     // adding the correct feature type
-=======
-		feat.Tags = []uint32{0, uint32(stringmap[k])} // this takes of geohash / the geohash value
-		feat.Type = &feat_type                        // adding the correct feature type
->>>>>>> origin/master
 
 		// now iterating through each v value
 		geom := []uint32{}
@@ -179,21 +154,13 @@ func Make_Vector_Tile_Index(tilemap map[string][]Yrow, outfilename string) {
 	extent := vector_tile.Default_Tile_Layer_Extent
 	//var bound []Bounds
 	layername := "TileIndex"
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/master
 	tile.Layers = []*vector_tile.Tile_Layer{
 		{
 			Version:  &layerVersion,
 			Name:     &layername,
 			Extent:   &extent,
 			Values:   tile_values,
-<<<<<<< HEAD
 			Keys:     []string{},
-=======
-			Keys:     keys,
->>>>>>> origin/master
 			Features: features,
 		},
 	}
