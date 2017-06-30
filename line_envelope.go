@@ -3,40 +3,34 @@ package tile_reduce
 import (
 	"encoding/json"
 	"fmt"
-	l "layersplit"
 	m "mercantile"
+	pc "polyclip"
 	"sort"
 	"strings"
 )
 
-// gets the slope of two points along a line
+// gets the slope of two pc.Points along a line
 // if statement logic accounts for undefined corner case
-func get_slope(pt1 Point, pt2 Point) float64 {
+func get_slope2(pt1 pc.Point, pt2 pc.Point) float64 {
 	if pt1.X == pt2.X {
 		return 1000000.0
 	}
 	return (pt2.Y - pt1.Y) / (pt2.X - pt1.X)
 }
 
-// Point represents a point in space.
-type Size struct {
+// pc.Point represents a pc.Point in space.
+type Size2 struct {
 	deltaX float64
 	deltaY float64
 }
 
-// Point represents a point in space.
-type Point struct {
-	X float64
-	Y float64
-}
-
-// iteroplates the position of y based on x of the location between two points
+// iteroplates the position of y based on x of the location between two pc.Points
 // this function accepts m the slope to keep it from recalculating
-// what could be several hundred/thousand times between two points
-func interp(pt1 Point, pt2 Point, x float64) Point {
-	m := get_slope(pt1, pt2)
+// what could be several hundred/thousand times between two pc.Points
+func interp2(pt1 pc.Point, pt2 pc.Point, x float64) pc.Point {
+	m := get_slope2(pt1, pt2)
 	y := (x-pt1.X)*m + pt1.Y
-	return Point{x, y}
+	return pc.Point{x, y}
 }
 
 type ResponseCoords2 struct {
@@ -52,16 +46,16 @@ func get_coords_json2(stringcoords string) [][][]float64 {
 	return res.Coords
 }
 
-func distance_pts(oldpt Point, pt Point) Size {
-	return Size{pt.X - oldpt.X, pt.Y - oldpt.Y}
+func distance_pts(oldpt pc.Point, pt pc.Point) Size2 {
+	return Size2{pt.X - oldpt.X, pt.Y - oldpt.Y}
 
 }
 
-func distance_bounds(bds m.Extrema) Size {
-	return Size{bds.E - bds.W, bds.N - bds.S}
+func distance_bounds(bds m.Extrema) Size2 {
+	return Size2{bds.E - bds.W, bds.N - bds.S}
 }
 
-func which_plane(oldpt Point, pt Point, oldbds m.Extrema) string {
+func which_plane(oldpt pc.Point, pt pc.Point, oldbds m.Extrema) string {
 	xs := []float64{oldpt.X, pt.X}
 	sort.Float64s(xs)
 
@@ -89,8 +83,8 @@ func which_plane(oldpt Point, pt Point, oldbds m.Extrema) string {
 	}
 }
 
-// given a point checks to see if the given pt is within the correct bounds
-func check_bounds(oldpt Point, pt Point, intersectpt Point, oldbds m.Extrema) bool {
+// given a pc.Point checks to see if the given pt is within the correct bounds
+func check_bounds(oldpt pc.Point, pt pc.Point, intersectpt pc.Point, oldbds m.Extrema) bool {
 	if (intersectpt.X >= oldbds.W) && (intersectpt.X <= oldbds.E) && (intersectpt.Y >= oldbds.S) && (intersectpt.Y <= oldbds.N) && (check_bb(oldpt, pt, intersectpt) == true) {
 		//fmt.Print(check_bb(oldpt, pt, intersectpt), "\n")
 		return true
@@ -99,14 +93,14 @@ func check_bounds(oldpt Point, pt Point, intersectpt Point, oldbds m.Extrema) bo
 	}
 }
 
-// finding the point that intersects with a given y
-func opp_interp(pt1 Point, pt2 Point, y float64) Point {
-	m := get_slope(pt1, pt2)
+// finding the pc.Point that intersects with a given y
+func opp_interp(pt1 pc.Point, pt2 pc.Point, y float64) pc.Point {
+	m := get_slope2(pt1, pt2)
 	x := ((y - pt1.Y) / m) + pt1.X
-	return Point{x, y}
+	return pc.Point{x, y}
 }
 
-func check_bb(oldpt Point, pt Point, intersectpt Point) bool {
+func check_bb(oldpt pc.Point, pt pc.Point, intersectpt pc.Point) bool {
 	xs := []float64{oldpt.X, pt.X}
 	sort.Float64s(xs)
 
@@ -121,15 +115,15 @@ func check_bb(oldpt Point, pt Point, intersectpt Point) bool {
 
 }
 
-// this function gets the intersection point with a bb box
+// this function gets the intersection pc.Point with a bb box
 // it also returns a string of the axis it intersected with
-func get_intersection_pt(oldpt Point, pt Point, oldbds m.Extrema) (Point, string) {
-	trypt := interp(oldpt, pt, oldbds.W)
+func get_intersection_pt(oldpt pc.Point, pt pc.Point, oldbds m.Extrema) (pc.Point, string) {
+	trypt := interp2(oldpt, pt, oldbds.W)
 	axis := "west"
 	//fmt.Printf("%f,%f\n", trypt.X, trypt.Y)
 
 	if check_bounds(oldpt, pt, trypt, oldbds) == false {
-		trypt = interp(oldpt, pt, oldbds.E)
+		trypt = interp2(oldpt, pt, oldbds.E)
 		//fmt.Printf("%f,%f\n", trypt.X, trypt.Y)
 
 		axis = "east"
@@ -146,18 +140,18 @@ func get_intersection_pt(oldpt Point, pt Point, oldbds m.Extrema) (Point, string
 		axis = "north"
 	}
 	if axis == "north" {
-		trypt = Point{0, 0}
+		trypt = pc.Point{0, 0}
 	}
 
 	return trypt, axis
 }
-func itersection_pt(oldpt Point, pt Point, oldbds m.Extrema, axis string) Point {
+func itersection_pt(oldpt pc.Point, pt pc.Point, oldbds m.Extrema, axis string) pc.Point {
 	//fmt.Printf("%f,%f\n", trypt.X, trypt.Y)
 	if axis == "west" {
-		trypt := interp(oldpt, pt, oldbds.W)
+		trypt := interp2(oldpt, pt, oldbds.W)
 		return trypt
 	} else if axis == "east" {
-		trypt := interp(oldpt, pt, oldbds.E)
+		trypt := interp2(oldpt, pt, oldbds.E)
 		//fmt.Printf("%f,%f\n", trypt.X, trypt.Y)
 		return trypt
 
@@ -171,12 +165,12 @@ func itersection_pt(oldpt Point, pt Point, oldbds m.Extrema, axis string) Point 
 		return trypt
 		//fmt.Printf("%f,%f\n", trypt.X, trypt.Y)
 	}
-	return Point{0, 0}
+	return pc.Point{0, 0}
 }
 
 // convert the lines representing tile coods into lines readable by
 // nlgeojson
-func convert_tile_coords(total [][]Point) {
+func convert_tile_coords(total [][]pc.Point) {
 	count := 0
 	var totalstring []string
 	for _, line := range total {
@@ -201,7 +195,7 @@ func convert_tile_coords(total [][]Point) {
 // which will then be placed in two different maps (maybe
 // if mapped lists maintain there order
 
-// Point represents a point in space.
+// pc.Point represents a pc.Point in space.
 type TileMeta struct {
 	AxisS  string
 	AxisE  string
@@ -218,8 +212,8 @@ func Odd(number int) bool {
 	return !Even(number)
 }
 
-// point in polygon derived from the xmap data structure
-func Pip_simple(pt Point, topmap map[string][]float64, latconst float64, size int) bool {
+// pc.Point in polygon derived from the xmap data structure
+func Pip_simple(pt pc.Point, topmap map[string][]float64, latconst float64, size int) bool {
 	ghash := m.Tile_Geohash(pt.X, latconst, size)
 	ycollisions := topmap[ghash]
 	//fmt.Print(ycollisions)
@@ -247,10 +241,10 @@ func Pip_simple(pt Point, topmap map[string][]float64, latconst float64, size in
 // checks at each of the four corners of the geohash for its existance in the polygon
 // *		* < testing these corners
 //
-//     -	<- this is the normal decode point
+//     -	<- this is the normal decode pc.Point
 //
 // *		* < testing these corners
-func Check_single_ghash(ghash string, totalmap map[string][]float64, zoom int) (map[string]Point, []string) {
+func Check_single_ghash(ghash string, totalmap map[string][]float64, zoom int) (map[string]pc.Point, []string) {
 	extrema := m.Bounds(m.Strtile(ghash))
 
 	///fmt.Printf("%f,%f\n", extrema.e, extrema.n)
@@ -259,37 +253,37 @@ func Check_single_ghash(ghash string, totalmap map[string][]float64, zoom int) (
 	//fmt.Printf("%f,%f\n", extrema.w, extrema.s)
 	latconst := totalmap["latconst"][0]
 
-	// checking each cornerr point
-	boolupperright := Pip_simple(Point{extrema.E - .0000001, extrema.N - .0000001}, totalmap, latconst, zoom)
-	boolupperleft := Pip_simple(Point{extrema.W + .0000001, extrema.N - .0000001}, totalmap, latconst, zoom)
-	boollowerright := Pip_simple(Point{extrema.E - .0000001, extrema.S + .0000001}, totalmap, latconst, zoom)
-	boollowerleft := Pip_simple(Point{extrema.W + .0000001, extrema.S + .0000001}, totalmap, latconst, zoom)
+	// checking each cornerr pc.Point
+	boolupperright := Pip_simple(pc.Point{extrema.E - .0000001, extrema.N - .0000001}, totalmap, latconst, zoom)
+	boolupperleft := Pip_simple(pc.Point{extrema.W + .0000001, extrema.N - .0000001}, totalmap, latconst, zoom)
+	boollowerright := Pip_simple(pc.Point{extrema.E - .0000001, extrema.S + .0000001}, totalmap, latconst, zoom)
+	boollowerleft := Pip_simple(pc.Point{extrema.W + .0000001, extrema.S + .0000001}, totalmap, latconst, zoom)
 
 	//fmt.Print("upperleft:", boolupperleft, ", lowerright:", boollowerright, " lowerleft:", boollowerleft, " upperright:", boolupperright, "\n")
-	geomshouldinclude := map[string]Point{}
+	geomshouldinclude := map[string]pc.Point{}
 	keys := []string{}
 	if boolupperright == true {
-		geomshouldinclude["upperright"] = Point{extrema.E, extrema.N}
+		geomshouldinclude["upperright"] = pc.Point{extrema.E, extrema.N}
 		//fmt.Printf("%f,%f\n", extrema.E, extrema.N)
 		keys = append(keys, "upperright")
 	}
 
 	if boolupperleft == true {
-		geomshouldinclude["upperleft"] = Point{extrema.W, extrema.N}
+		geomshouldinclude["upperleft"] = pc.Point{extrema.W, extrema.N}
 		keys = append(keys, "upperleft")
 
 		//fmt.Printf("%f,%f\n", extrema.W, extrema.N)
 	}
 
 	if boollowerright == true {
-		geomshouldinclude["lowerright"] = Point{extrema.E, extrema.S}
+		geomshouldinclude["lowerright"] = pc.Point{extrema.E, extrema.S}
 		//fmt.Printf("%f,%f\n", extrema.E, extrema.S)
 		keys = append(keys, "lowerright")
 
 	}
 
 	if boollowerleft == true {
-		geomshouldinclude["lowerleft"] = Point{extrema.W, extrema.S}
+		geomshouldinclude["lowerleft"] = pc.Point{extrema.W, extrema.S}
 		keys = append(keys, "lowerleft")
 
 		//fmt.Printf("%f,%f\n", extrema.W, extrema.S)
@@ -314,25 +308,25 @@ func opp_axis(val string) string {
 
 // Point represents a point in space.
 type Line_Edge struct {
-	Line []Point
+	Line []pc.Point
 	Gid  string
 }
 
 // functionifying this section so it doesnt get massive pretty decent break point
 func make_edges(coords [][]float64, gid string, zoom int) map[m.TileID][]Line_Edge {
 	count := 0
-	var pt, oldpt, intersectpt Point
+	var pt, oldpt, intersectpt pc.Point
 	var tileid, oldtileid m.TileID
 	var bds, oldbds m.Extrema
 	var axis string
-	var tilecoords []Point
+	var tilecoords []pc.Point
 	//var totaltilecoords [][]Point
 	//var mapmeta
 	//var oldrow []float64
 	//axisbeg := "hee"
 	tilemap := map[m.TileID][]Line_Edge{}
 	for _, row := range coords {
-		pt = Point{row[0], row[1]}
+		pt = pc.Point{row[0], row[1]}
 		tileid = m.Tile(pt.X, pt.Y, zoom)
 		bds = m.Bounds(tileid)
 		if count == 0 {
@@ -360,7 +354,7 @@ func make_edges(coords [][]float64, gid string, zoom int) map[m.TileID][]Line_Ed
 					tilecoords = append(tilecoords, intersectpt)
 					tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: gid})
 
-					tilecoords = []Point{intersectpt}
+					tilecoords = []pc.Point{intersectpt}
 					//axisbeg := opp_axis(axis)
 				}
 			} else {
@@ -413,7 +407,7 @@ func opp_translate(val string) string {
 	return val
 }
 
-func get_string(align []Point) string {
+func Get_string(align []pc.Point) string {
 	newlist := []string{}
 	for _, i := range align {
 		newlist = append(newlist, fmt.Sprintf("[%f,%f]", i.X, i.Y))
@@ -427,7 +421,7 @@ type Output_Map struct {
 }
 
 // makes the tilemap datastructure for lines
-func Make_Tilemap_Line(data [][]string, size int) map[m.TileID][]Line_Edge {
+func Make_Tilemap_Lines(data [][]string, size int) map[m.TileID][]Line_Edge {
 	c := make(chan Output_Map)
 	counter := 0
 	totalmap := map[m.TileID][]Line_Edge{}
@@ -435,14 +429,13 @@ func Make_Tilemap_Line(data [][]string, size int) map[m.TileID][]Line_Edge {
 	// iterating through each line in csv file
 	for i, row := range data {
 		go func(row []string, size int, c chan Output_Map) {
-			ll := Output_Map{make_edges(get_coords_json2("[" + row[1] + "]")[0], row[0], size)}
-			c <- ll
+			c <- Output_Map{make_edges(get_coords_json2("[" + row[1] + "]")[0], row[0], size)}
 		}(row, size, c)
 
-		if (counter == 10000) || (len(data)-1 == i) {
+		if (counter == 50000) || (len(data)-1 == i) {
 			count := 0
 			total += counter
-			fmt.Printf("[%d/%d] Lines Complete...\n", total, len(data))
+			fmt.Printf("[%d/%d] Getting tilemap, Size: %d\n", total, len(data), size)
 			for count < counter {
 				select {
 				case msg1 := <-c:
