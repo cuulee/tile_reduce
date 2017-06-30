@@ -2,7 +2,7 @@ package tile_reduce
 
 import (
 	//geo "github.com/paulmach/go.geo"
-	"vector-tile/2.1"
+	"./vector-tile/2.1"
 	//"os"
 	//"strings"
 	//"fmt"

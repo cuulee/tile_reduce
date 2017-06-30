@@ -8,14 +8,14 @@ import (
 	_ "github.com/lib/pq"
 	h "github.com/mitchellh/hashstructure"
 	//"io/ioutil"
+	"./vector-tile/2.1"
 	"github.com/golang/protobuf/proto"
+	m "github.com/murphy214/mercantile"
 	"io/ioutil"
-	m "mercantile"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
-	"vector-tile/2.1"
 )
 
 // hashs a given tv structure

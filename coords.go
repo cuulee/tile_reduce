@@ -1,9 +1,9 @@
 package tile_reduce
 
 import (
+	m "github.com/murphy214/mercantile"
+	pc "github.com/murphy214/polyclip"
 	"math"
-	m "mercantile"
-	pc "polyclip"
 )
 
 // Distance finds the length of the hypotenuse between two points.

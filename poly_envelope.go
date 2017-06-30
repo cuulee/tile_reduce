@@ -1,9 +1,9 @@
 package tile_reduce
 
 import (
-	l "layersplit"
-	m "mercantile"
-	pc "polyclip"
+	l "github.com/murphy214/layersplit"
+	m "github.com/murphy214/mercantile"
+	pc "github.com/murphy214/polyclip"
 	"strings"
 )
 

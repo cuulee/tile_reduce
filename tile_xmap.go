@@ -3,10 +3,10 @@ package tile_reduce
 import (
 	"encoding/json"
 	"fmt"
-	l "layersplit"
-	m "mercantile"
+	l "github.com/murphy214/layersplit"
+	m "github.com/murphy214/mercantile"
+	pc "github.com/murphy214/polyclip"
 	"os"
-	pc "polyclip"
 	"strings"
 )
 

@@ -26,10 +26,10 @@ package tile_reduce
 import (
 	//"fmt"
 	"fmt"
+	m "github.com/murphy214/mercantile"
 	geo "github.com/paulmach/go.geo"
 	"math"
 	"math/rand"
-	m "mercantile"
 	"sort"
 	"strings"
 )

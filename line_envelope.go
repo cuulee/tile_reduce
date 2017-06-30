@@ -3,8 +3,8 @@ package tile_reduce
 import (
 	"encoding/json"
 	"fmt"
-	m "mercantile"
-	pc "polyclip"
+	m "github.com/murphy214/mercantile"
+	pc "github.com/murphy214/polyclip"
 	"sort"
 	"strings"
 )

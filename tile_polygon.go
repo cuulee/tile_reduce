@@ -2,10 +2,10 @@ package tile_reduce
 
 import (
 	"fmt"
-	l "layersplit"
-	m "mercantile"
+	l "github.com/murphy214/layersplit"
+	m "github.com/murphy214/mercantile"
+	pc "github.com/murphy214/polyclip"
 	"os"
-	pc "polyclip"
 )
 
 // Given two slices containg two different geographic layers

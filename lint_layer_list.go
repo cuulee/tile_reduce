@@ -1,8 +1,8 @@
 package tile_reduce
 
 import (
-	l "layersplit"
-	pc "polyclip"
+	l "github.com/murphy214/layersplit"
+	pc "github.com/murphy214/polyclip"
 )
 
 // Overlaps returns whether r1 and r2 have a non-empty intersection.
