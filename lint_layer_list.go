@@ -1,4 +1,4 @@
-package tile_reduce
+package tile_surge
 
 import (
 	l "github.com/murphy214/layersplit"
@@ -116,5 +116,26 @@ func Lint_Layer_Polygons(layer []l.Polygon) [][]string {
 			newlayer = append(newlayer, []string{i.Area, l.Make_Each_Polygon(i.Polygon)})
 		}
 	}
+	return newlayer
+}
+
+// this function takes what would normally be a representitive square or something
+// with disorganized contours and sorts them into a layer list
+// corresponding to their hole relation
+// this function assumes the area field contains the json data
+func Lint_Single_Polygon(polygon l.Polygon) []l.Polygon {
+	newlayer := []l.Polygon{}
+	if len(polygon.Polygon) > 1 {
+		newpolygons := Lint_Polygons(polygon.Polygon)
+		for _, poly := range newpolygons {
+			newpoly := polygon
+			newpoly.Polygon = poly
+			newlayer = append(newlayer, newpoly)
+		}
+		return newlayer
+	} else {
+		newlayer = append(newlayer, polygon)
+	}
+
 	return newlayer
 }

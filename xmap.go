@@ -1,4 +1,4 @@
-package tile_reduce
+package tile_surge
 
 // This file creates the most important data stucture within this alg.
 // The xmap data stucture that pairs x intercepts within a map so that

@@ -1,4 +1,4 @@
-package tile_reduce
+package tile_surge
 
 import (
 	"encoding/json"

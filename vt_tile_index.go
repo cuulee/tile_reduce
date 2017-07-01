@@ -1,4 +1,4 @@
-package tile_reduce
+package tile_surge
 
 import (
 	//geo "github.com/paulmach/go.geo"
