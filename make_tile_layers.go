@@ -146,7 +146,8 @@ func Tile_Values_Add_Feature2(tempval []*vector_tile.Tile_Value, keylist []strin
 			tile_values_map[hash] = current
 			tile_values = append(tile_values, tv)
 			tags = append(tags, keysmap[k])
-			tags = append(tags, current)
+			tags = append(tags, uint32(len(tile_values)-1))
+			current = uint32(len(tile_values))
 			current += 1
 		} else {
 			tags = append(tags, keysmap[k])
@@ -393,7 +394,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 
 	// getting the gid and geometr2y field given within the config
 	// this will be used to create the tilemaps going across each zoom.
-	rows, _ := p.Query(fmt.Sprintf("SELECT %s,%s FROM %s LIMIT 5", config.ID, config.GeomField, config.Database))
+	rows, _ := p.Query(fmt.Sprintf("SELECT %s,%s FROM %s", config.ID, config.GeomField, config.Database))
 	var geoms [][]string
 	for rows.Next() {
 		_ = rows.Scan(&gid, &geom)
@@ -404,7 +405,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 	//var valmap map[int]map[string]interface{}
 	total_tile_values := [][]*vector_tile.Tile_Value{}
 	if len(config.Fields) != 0 {
-		rows, _ = p.Query(fmt.Sprintf("SELECT %s FROM %s LIMIT 5", strings.Join(config.Fields, ","), config.Database))
+		rows, _ = p.Query(fmt.Sprintf("SELECT %s FROM %s", strings.Join(config.Fields, ","), config.Database))
 		//fmt.Print(rows, "\n\n")
 		// getting key maps and shit
 		fdescs := rows.FieldDescriptions()
@@ -439,11 +440,14 @@ func Make_Tile_Layer_Polygon(config Config) {
 	//fmt.Print(total_tile_values, "\n")
 	// makign the tile layer from the geometry gathered
 	layer := l.Make_Layer(geoms, "STATES")
+
+	fmt.Print(layer[0], "\n")
 	fmt.Print(total_tile_values)
 	c := make(chan string)
 	//fmt.Print(layer, "layer")
 	for _, zoom := range config.Zooms {
 		tilemap := Make_Tilemap(layer, zoom)
+
 		//fmt.Print(tilemap, "\n")
 		// this parrelizes the write out for each go function
 		go func(geoms [][]string, total_tile_values [][]*vector_tile.Tile_Value, zoom int, tilemap map[m.TileID][]int, c chan string) {
@@ -494,7 +498,10 @@ func Make_Tile_Layer_Polygon(config Config) {
 						//fmt.Print(tempval, "\n")
 						//fmt.Print(tempval, "tempval\n")
 						// updating the features map
+						fmt.Print(current, len(tile_values), tile_values, "befoer\n")
 						tile_values_map, tile_values, current, tags, klist = Tile_Values_Add_Feature2(tempval, config.Fields, tile_values_map, tile_values, current, keysmap)
+
+						fmt.Print(current, len(tile_values), tile_values, tags, "after\n")
 						//fmt.Print(tags, "\n")
 						// trimming the polygon by the box shit.
 						polygon.Polygon = polygon.Polygon.Construct(pc.INTERSECTION, boxpolygon)
@@ -517,6 +524,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 								// adding geom on
 								feat.Geometry = geomtile
 								features = append(features, &feat)
+								fmt.Print(tags, len(tile_values), "\n")
 
 							}
 						}
@@ -530,7 +538,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 					//var bound []Bounds
 					layername := "lines"
 					//fmt.Print(tile_values, "end\n")
-					//fmt.Print("\n\n\n\n")
+					fmt.Print("\n\n\n\n")
 					tile.Layers = []*vector_tile.Tile_Layer{
 						{
 							Version:  &layerVersion,
@@ -541,7 +549,16 @@ func Make_Tile_Layer_Polygon(config Config) {
 							Features: features,
 						},
 					}
-					//fmt.Print(tile, "\n")
+					for _, i := range features {
+						for _, t := range i.Tags {
+							fmt.Print(t, "\n")
+							//fmt.Print(current, tile_values, tile_values_map, "before crash\n")
+							//fmt.Print(tile_values[t], current, "\n")
+
+						}
+						//fmt.Print(i.Tags,tile_values, "\n")
+
+					}
 					// writing out each tile
 					pbfdata, _ := proto.Marshal(tile)
 					ioutil.WriteFile(filename, []byte(pbfdata), 0644)
