@@ -12,3 +12,17 @@ So this hopefully will take some of the stuff I've done with tile processing and
 ### The Hard Part 
 
 The hard part isn't getting a pipeline to work with one sequential process thats already been done sort of. The hard part is to make it robust enough to interact with existing APIs ([layersplit](https://github.com/murphy214/layersplit),[geoindex](https://github.com/murphy214/geoindex),and whatever the vector  tile API creation API or structure will look like. I'm not super concerned with vector tile implementations currently because it seems like most renderers have their own set of rules thats tailored to how they produce the tiles.
+
+# Update 
+
+I've basically implemented a decent vector tile API, that renders for mapbox vector tiles in mapbox gl-js but currently the api only supports postgres database pulls and not much configuration is available, however its a pretty decent start, but their are still tons of other things that still need to be implemented. Also, largish, design decisions need to be made, do I want to mill through an entire tileset of several layers at a time (severely complicating every aspect of the API or do i want to create each layer flat into a directory set and combine them about two different directories. This reduces the amount of ram that would be required throughout all the tile processes)
+
+Its also worth considering the performance characteristics of different tile layers to be processed for example, sometimes you want sequential processing for huge sets of lines,where you only really process one zoom at a time, however for smaller sets of lines or polygons you may be able to process them all at once in the same go routine. This essentially duplicates the dataset by the number of zooms you have.
+
+### Geometry - Simplification
+There also is geometry simplification which won't reduce processing time but will shrink the file size and remove unuseful features at higher zooms. Their are several approachs to attempting this. 
+
+
+### Gzip - Compression
+I can't get mapbox to accept my tile even with the write headers I may try this again later probably just something on my end, its only a few lines of code anyway. 
+
