@@ -8,7 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	h "github.com/mitchellh/hashstructure"
 	//"io/ioutil"
-	"./vector-tile/2.1"
+
 	"github.com/golang/protobuf/proto"
 	l "github.com/murphy214/layersplit"
 	m "github.com/murphy214/mercantile"
@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"vector-tile/2.1"
 )
 
 // hashs a given tv structure
@@ -128,7 +129,7 @@ func tile_values_slice(vals []interface{}) []*vector_tile.Tile_Value {
 			tv.StringValue = &t
 			tile_slice = append(tile_slice, tv)
 		}
-		fmt.Print(tile_slice, tv, "\n")
+		//fmt.Print(tile_slice, tv, "\n")
 	}
 	return tile_slice
 }
@@ -143,12 +144,13 @@ func Tile_Values_Add_Feature2(tempval []*vector_tile.Tile_Value, keylist []strin
 		hash = Hash_Tv(tv)
 		onetag, ok := tile_values_map[hash]
 		if ok == false {
-			tile_values_map[hash] = current
 			tile_values = append(tile_values, tv)
+
+			tile_values_map[hash] = uint32(len(tile_values) - 1)
 			tags = append(tags, keysmap[k])
 			tags = append(tags, uint32(len(tile_values)-1))
 			current = uint32(len(tile_values))
-			current += 1
+			//current += 1
 		} else {
 			tags = append(tags, keysmap[k])
 			tags = append(tags, onetag)
@@ -441,8 +443,8 @@ func Make_Tile_Layer_Polygon(config Config) {
 	// makign the tile layer from the geometry gathered
 	layer := l.Make_Layer(geoms, "STATES")
 
-	fmt.Print(layer[0], "\n")
-	fmt.Print(total_tile_values)
+	//fmt.Print(layer[0], "\n")
+	//fmt.Print(total_tile_values)
 	c := make(chan string)
 	//fmt.Print(layer, "layer")
 	for _, zoom := range config.Zooms {
@@ -498,10 +500,10 @@ func Make_Tile_Layer_Polygon(config Config) {
 						//fmt.Print(tempval, "\n")
 						//fmt.Print(tempval, "tempval\n")
 						// updating the features map
-						fmt.Print(current, len(tile_values), tile_values, "befoer\n")
+						//fmt.Print(current, len(tile_values), tile_values, "befoer\n")
 						tile_values_map, tile_values, current, tags, klist = Tile_Values_Add_Feature2(tempval, config.Fields, tile_values_map, tile_values, current, keysmap)
 
-						fmt.Print(current, len(tile_values), tile_values, tags, "after\n")
+						//fmt.Print(current, len(tile_values), tile_values, tags, "after\n")
 						//fmt.Print(tags, "\n")
 						// trimming the polygon by the box shit.
 						polygon.Polygon = polygon.Polygon.Construct(pc.INTERSECTION, boxpolygon)
@@ -524,7 +526,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 								// adding geom on
 								feat.Geometry = geomtile
 								features = append(features, &feat)
-								fmt.Print(tags, len(tile_values), "\n")
+								//fmt.Print(tags, len(tile_values), "\n")
 
 							}
 						}
@@ -538,7 +540,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 					//var bound []Bounds
 					layername := "lines"
 					//fmt.Print(tile_values, "end\n")
-					fmt.Print("\n\n\n\n")
+					//fmt.Print("\n\n\n\n")
 					tile.Layers = []*vector_tile.Tile_Layer{
 						{
 							Version:  &layerVersion,
@@ -549,19 +551,11 @@ func Make_Tile_Layer_Polygon(config Config) {
 							Features: features,
 						},
 					}
-					for _, i := range features {
-						for _, t := range i.Tags {
-							fmt.Print(t, "\n")
-							//fmt.Print(current, tile_values, tile_values_map, "before crash\n")
-							//fmt.Print(tile_values[t], current, "\n")
 
-						}
-						//fmt.Print(i.Tags,tile_values, "\n")
-
-					}
 					// writing out each tile
 					pbfdata, _ := proto.Marshal(tile)
-					ioutil.WriteFile(filename, []byte(pbfdata), 0644)
+
+					ioutil.WriteFile(filename, pbfdata, 0666)
 					cc <- ""
 					//fmt.Print(tile, "\n")
 				}(k, polys, cc)
@@ -571,7 +565,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 			for count < len(tilemap) {
 				select {
 				case msg1 := <-cc:
-					fmt.Printf("%s%d[%d/%d]\n", msg1, zoom, count, len(tilemap))
+					fmt.Printf("Size: %s%d [%d/%d]\n", msg1, zoom, count, len(tilemap))
 				}
 				count += 1
 			}
