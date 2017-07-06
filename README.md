@@ -17,6 +17,8 @@ The hard part isn't getting a pipeline to work with one sequential process thats
 
 I've basically implemented a decent vector tile API, that renders for mapbox vector tiles in mapbox gl-js but currently the api only supports postgres database pulls and not much configuration is available, however its a pretty decent start, but their are still tons of other things that still need to be implemented. Also, largish, design decisions need to be made, do I want to mill through an entire tileset of several layers at a time (severely complicating every aspect of the API or do i want to create each layer flat into a directory set and combine them about two different directories. This reduces the amount of ram that would be required throughout all the tile processes)
 
+**Also I've never actually implemented a good API in go lol, so this will probably be a bit rocky as far as configuration is concerned, but performance for tile creation for raw lines and polygons is pretty good, I'm not sure how to get tippecannoe to produce actual vector tiles,not raster-like overlays,but for the overlays its about as fast for lines for the entire California roadway dataset.**
+
 Its also worth considering the performance characteristics of different tile layers to be processed for example, sometimes you want sequential processing for huge sets of lines,where you only really process one zoom at a time, however for smaller sets of lines or polygons you may be able to process them all at once in the same go routine. This essentially duplicates the dataset by the number of zooms you have.
 
 ### Geometry - Simplification
