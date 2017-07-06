@@ -402,13 +402,10 @@ func Make_Tile_Layer_Polygon(config Config) {
 		_ = rows.Scan(&gid, &geom)
 		geoms = append(geoms, []string{gid, geom})
 	}
-	//fmt.Print(geoms, "\n")
-	//var vallist []map[string]interface{}
-	//var valmap map[int]map[string]interface{}
+
 	total_tile_values := [][]*vector_tile.Tile_Value{}
 	if len(config.Fields) != 0 {
 		rows, _ = p.Query(fmt.Sprintf("SELECT %s FROM %s", strings.Join(config.Fields, ","), config.Database))
-		//fmt.Print(rows, "\n\n")
 		// getting key maps and shit
 		fdescs := rows.FieldDescriptions()
 		for _, i := range fdescs {
@@ -416,7 +413,6 @@ func Make_Tile_Layer_Polygon(config Config) {
 			keysmap[i.Name] = current
 			current += 1
 		}
-		//fmt.Print(keysmap)
 
 		// setting up enviromentals that will be used to create tiles
 		current = uint32(0)
@@ -426,7 +422,6 @@ func Make_Tile_Layer_Polygon(config Config) {
 		// getting the geometries so they can be passed in
 		//features := []*vector_tile.Tile_Feature{}
 		//feat_type := vector_tile.Tile_POLYGON
-		//count := 0
 		for rows.Next() {
 			vals, _ := rows.Values()
 			total_tile_values = append(total_tile_values, tile_values_slice(vals))
@@ -438,8 +433,7 @@ func Make_Tile_Layer_Polygon(config Config) {
 	for i, row := range geoms {
 		mymap[row[0]] = i
 	}
-	//fmt.Print(mymap, "\n")
-	//fmt.Print(total_tile_values, "\n")
+
 	// makign the tile layer from the geometry gathered
 	layer := l.Make_Layer(geoms, "STATES")
 
@@ -463,11 +457,15 @@ func Make_Tile_Layer_Polygon(config Config) {
 				for _, i := range v {
 					polys = append(polys, layer[i])
 				}
+
+				// putting the geometries behind a go function to parrelize each tile
 				go func(k m.TileID, polys []l.Polygon, cc chan string) {
+					// instantiating global tile values
 					var tags []uint32
 					tile_values := []*vector_tile.Tile_Value{}
 					tile_values_map := map[uint64]uint32{}
 					current = uint32(0)
+
 					// getting the filename location of the tile were building within
 					filename := "tiles/" + strconv.Itoa(int(k.Z)) + "/" + strconv.Itoa(int(k.X)) + "/" + strconv.Itoa(int(k.Y))
 					dir := "tiles/" + strconv.Itoa(int(k.Z)) + "/" + strconv.Itoa(int(k.X))
@@ -492,19 +490,11 @@ func Make_Tile_Layer_Polygon(config Config) {
 					for _, polygon := range polys {
 						// getting polygon
 						// this is are tempvallist
-						//fmt.Print(tempplist, "\n")
-
 						tempval := total_tile_values[mymap[polygon.Area]]
 
-						//fmt.Print(tempval, polygon.Area, polygon.Pos, mymap[polygon.Area], "\n")
-						//fmt.Print(tempval, "\n")
-						//fmt.Print(tempval, "tempval\n")
-						// updating the features map
-						//fmt.Print(current, len(tile_values), tile_values, "befoer\n")
+						// adding values to tilemap and tile_values
 						tile_values_map, tile_values, current, tags, klist = Tile_Values_Add_Feature2(tempval, config.Fields, tile_values_map, tile_values, current, keysmap)
 
-						//fmt.Print(current, len(tile_values), tile_values, tags, "after\n")
-						//fmt.Print(tags, "\n")
 						// trimming the polygon by the box shit.
 						polygon.Polygon = polygon.Polygon.Construct(pc.INTERSECTION, boxpolygon)
 
@@ -513,10 +503,10 @@ func Make_Tile_Layer_Polygon(config Config) {
 
 						// iterating through each polygon alignment
 						for _, poly := range polygons {
-							//fmt.Print(tags)
 							// making the geometry
 							geomtile, _ = Make_Polygon(Make_Coords_Polygon(poly.Polygon, bd), []int32{0, 0})
-							//fmt.Print(tags, tile_values, "\n")
+
+							// if the geometry actually exists within the tile adding the layer
 							if len(geomtile) != 0 {
 								feat := vector_tile.Tile_Feature{}
 								//fmt.Print(tile_values, "tabs\n")
@@ -531,8 +521,6 @@ func Make_Tile_Layer_Polygon(config Config) {
 							}
 						}
 					}
-					//fmt.Print(tags, klist, "\n")
-					//fmt.Print(k, "\n")
 
 					tile := &vector_tile.Tile{}
 					layerVersion := uint32(15)
@@ -574,6 +562,153 @@ func Make_Tile_Layer_Polygon(config Config) {
 	}
 
 	for range config.Zooms {
+		select {
+		case msg1 := <-c:
+			fmt.Print(msg1)
+		}
+	}
+}
+
+// currently only makes the a single line layer from a configuration struct
+// this is simply my first actual time doing a complete function like this
+// once i know how to make both individually ill look into combining them.
+func Make_Tile_Layer_Polygon2(layer []l.Polygon, zooms []int, fields []string) {
+	//fmt.Print(layer[0], "\n")
+	//fmt.Print(total_tile_values)
+	keysmap := map[string]uint32{}
+	current := uint32(0)
+	keys := []string{}
+	for _, i := range fields {
+		keysmap[i] = current
+		keys = append(keys, i)
+		current += 1
+	}
+	current = uint32(0)
+	var klist []string
+
+	c := make(chan string)
+	//fmt.Print(layer, "layer")
+	for _, zoom := range zooms {
+		tilemap := Make_Tilemap(layer, zoom)
+
+		//fmt.Print(tilemap, "\n")
+		// this parrelizes the write out for each go function
+		go func(layer []l.Polygon, zoom int, tilemap map[m.TileID][]int, c chan string) {
+			//fmt.Print(len(tilemap), "\n")
+
+			cc := make(chan string)
+			for k, v := range tilemap {
+
+				// getting polygons from the index positions in tilemap
+				polys := []l.Polygon{}
+				for _, i := range v {
+					polys = append(polys, layer[i])
+				}
+
+				// putting the geometries behind a go function to parrelize each tile
+				go func(k m.TileID, polys []l.Polygon, cc chan string) {
+					// instantiating global tile values
+					var tags []uint32
+					tile_values := []*vector_tile.Tile_Value{}
+					tile_values_map := map[uint64]uint32{}
+					current = uint32(0)
+
+					// getting the filename location of the tile were building within
+					filename := "tiles/" + strconv.Itoa(int(k.Z)) + "/" + strconv.Itoa(int(k.X)) + "/" + strconv.Itoa(int(k.Y))
+					dir := "tiles/" + strconv.Itoa(int(k.Z)) + "/" + strconv.Itoa(int(k.X))
+					os.MkdirAll(dir, os.ModePerm)
+
+					// geometry initialization
+					bd := m.Bounds(k)
+					var geomtile []uint32
+					geomtile = []uint32{}
+
+					// feature initializaition
+					features := []*vector_tile.Tile_Feature{}
+					feat_type := vector_tile.Tile_POLYGON
+
+					// getting alignment of current id layer
+					boxpolygon := Make_Tile_Poly(k)
+
+					// in this block of codee im iterating through v the index positons of polygons
+					// fromt he original layer as well as the polygons themselves
+					// this is beccause wwe still have to access the idnex pos to get the tempvals proerpties
+					// for each polygon
+					for _, polygon := range polys {
+						// getting polygon
+						// this is are tempvallist
+						tempval := tile_values_slice(polygon.Properties)
+
+						// adding values to tilemap and tile_values
+						tile_values_map, tile_values, current, tags, klist = Tile_Values_Add_Feature2(tempval, fields, tile_values_map, tile_values, current, keysmap)
+
+						// trimming the polygon by the box shit.
+						polygon.Polygon = polygon.Polygon.Construct(pc.INTERSECTION, boxpolygon)
+
+						// linting the polygon if contains more than two alignments
+						polygons := Lint_Single_Polygon(polygon)
+
+						// iterating through each polygon alignment
+						for _, poly := range polygons {
+							// making the geometry
+							geomtile, _ = Make_Polygon(Make_Coords_Polygon(poly.Polygon, bd), []int32{0, 0})
+
+							// if the geometry actually exists within the tile adding the layer
+							if len(geomtile) != 0 {
+								feat := vector_tile.Tile_Feature{}
+								//fmt.Print(tile_values, "tabs\n")
+								feat.Tags = tags       // this takes of geohash / the geohash value
+								feat.Type = &feat_type // adding the correct feature type
+								// now iterating through each v value
+								// adding geom on
+								feat.Geometry = geomtile
+								features = append(features, &feat)
+								//fmt.Print(tags, len(tile_values), "\n")
+
+							}
+						}
+					}
+
+					tile := &vector_tile.Tile{}
+					layerVersion := uint32(15)
+					extent := vector_tile.Default_Tile_Layer_Extent
+					//var bound []Bounds
+					layername := "lines"
+					//fmt.Print(tile_values, "end\n")
+					//fmt.Print("\n\n\n\n")
+					tile.Layers = []*vector_tile.Tile_Layer{
+						{
+							Version:  &layerVersion,
+							Name:     &layername,
+							Extent:   &extent,
+							Values:   tile_values,
+							Keys:     keys,
+							Features: features,
+						},
+					}
+
+					// writing out each tile
+					pbfdata, _ := proto.Marshal(tile)
+
+					ioutil.WriteFile(filename, pbfdata, 0666)
+					cc <- ""
+					//fmt.Print(tile, "\n")
+				}(k, polys, cc)
+
+			}
+			count := 0
+			for count < len(tilemap) {
+				select {
+				case msg1 := <-cc:
+					fmt.Printf("Size: %s%d [%d/%d]\n", msg1, zoom, count, len(tilemap))
+				}
+				count += 1
+			}
+			c <- ""
+		}(layer, zoom, tilemap, c)
+	}
+
+	for range zooms {
 		select {
 		case msg1 := <-c:
 			fmt.Print(msg1)
