@@ -6,6 +6,7 @@ import (
 	m "github.com/murphy214/mercantile"
 	pc "github.com/murphy214/polyclip"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -308,12 +309,13 @@ func opp_axis(val string) string {
 
 // Point represents a point in space.
 type Line_Edge struct {
-	Line []pc.Point
-	Gid  string
+	Line       []pc.Point
+	Gid        string
+	Properties []interface{}
 }
 
 // functionifying this section so it doesnt get massive pretty decent break point
-func make_edges(coords [][]float64, gid string, zoom int) map[m.TileID][]Line_Edge {
+func make_edges(line Line, gid string, zoom int) map[m.TileID][]Line_Edge {
 	count := 0
 	var pt, oldpt, intersectpt pc.Point
 	var tileid, oldtileid m.TileID
@@ -325,7 +327,7 @@ func make_edges(coords [][]float64, gid string, zoom int) map[m.TileID][]Line_Ed
 	//var oldrow []float64
 	//axisbeg := "hee"
 	tilemap := map[m.TileID][]Line_Edge{}
-	for _, row := range coords {
+	for _, row := range line.Line {
 		pt = pc.Point{row[0], row[1]}
 		tileid = m.Tile(pt.X, pt.Y, zoom)
 		bds = m.Bounds(tileid)
@@ -352,7 +354,7 @@ func make_edges(coords [][]float64, gid string, zoom int) map[m.TileID][]Line_Ed
 					axis = which_plane(oldpt, pt, oldbds)
 					intersectpt = itersection_pt(oldpt, pt, oldbds, axis)
 					tilecoords = append(tilecoords, intersectpt)
-					tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: gid})
+					tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: gid, Properties: line.Properties})
 
 					tilecoords = []pc.Point{intersectpt}
 					//axisbeg := opp_axis(axis)
@@ -376,7 +378,7 @@ func make_edges(coords [][]float64, gid string, zoom int) map[m.TileID][]Line_Ed
 	tilecoords = append(tilecoords, oldpt)
 
 	// account for if all points were in the square
-	tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: gid})
+	tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: gid, Properties: line.Properties})
 
 	return tilemap
 }
@@ -421,15 +423,16 @@ type Output_Map struct {
 }
 
 // makes the tilemap datastructure for lines
-func Make_Tilemap_Lines(data [][]string, size int) map[m.TileID][]Line_Edge {
+func Make_Tilemap_Lines(data []Line, size int) map[m.TileID][]Line_Edge {
 	c := make(chan Output_Map)
 	counter := 0
 	totalmap := map[m.TileID][]Line_Edge{}
 	total := 0
 	// iterating through each line in csv file
 	for i, row := range data {
-		go func(row []string, size int, c chan Output_Map) {
-			c <- Output_Map{make_edges(get_coords_json2("[" + row[1] + "]")[0], row[0], size)}
+		go func(row Line, size int, c chan Output_Map) {
+			istr := strconv.Itoa(i)
+			c <- Output_Map{make_edges(row, istr, size)}
 		}(row, size, c)
 
 		if (counter == 50000) || (len(data)-1 == i) {
