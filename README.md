@@ -9,6 +9,23 @@ For example two of the processing jobs I've implemented in round about ways are 
 
 So this hopefully will take some of the stuff I've done with tile processing and hopefully get more performance out of this type of pipeline then something written in another language due to its ability to process all the way down by tile after the inialization processing. I've written smaller things like this in python and while easier the top - down nature of the processing and the way in which processes can be hampered by one huge sequential process that isn't using cycles really makes it worthwhile to build something with concurrency in mind. 
 
+# File Structure 
+#### Misc.
+* **line_envelope.go** - Creates the map[xyz][]part_of_line data structure for concurrency about each tile created. 
+* **poly_envelope.go** - Creates the map[xyz][]inds_of_layer data structure for concurency about each tile, it should be noted that the values returned are indicies to be referenced from the original layer to prevent unnecessary data duplication. 
+* **lint_layer_list.go** - Used when raw polygon rings aren't desired and a structure for the ring ordering is required. (i.e. takes random polygon rings organizes them into simple geometries) 
+* **tile_polygon.go** - Sort of the base use case for this repo, outputs a set of polygon geometries sliced about tiles to a csv. This was more of a stepping stone to what the repo was actually built for.
+
+#### Tile Index Part of Codebase
+* **tile_xmap.go** - Creates the xmap vector tile structures for a given tile zoom, see documentation on vector tile index for more information.
+* **vt_tile_index.go** - Reads / writes a polygon index for a tile to a vector tile representation.
+* **xmap.go** - Datastructure used for creating the index, essentially an entire ray-cast for a given tile.
+
+#### Vector Tile Creation Part of Codebase
+* **make_tile_layers.go** - Can create how vector tile sets of a given layer (currently only supports one) for both lines and polygons.
+* **coords.go** - Used for the raw conversion of float values in map projection to tile coordinates in tile projection (float to int) 
+* **geometry.go** - Used for creating the tile geometries for vector tile features for either lines or polygons. 
+
 ### The Hard Part 
 
 The hard part isn't getting a pipeline to work with one sequential process thats already been done sort of. The hard part is to make it robust enough to interact with existing APIs ([layersplit](https://github.com/murphy214/layersplit),[geoindex](https://github.com/murphy214/geoindex),and whatever the vector  tile API creation API or structure will look like. I'm not super concerned with vector tile implementations currently because it seems like most renderers have their own set of rules thats tailored to how they produce the tiles.
