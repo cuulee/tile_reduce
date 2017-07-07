@@ -1,6 +1,8 @@
 # tile_reduce
 A tile reduce / batch processing library
 
+[Tile Polygon Index Summary](https://github.com/murphy214/tile_reduce/blob/master/Tile_Index.md)
+
 #### Goal
 
 While doing geospatial processing in go especially revolving around doing things about tiles I found myself rewriting or poorly implementing the same parts of code over and over again. The nature of the go concurrency model often times makes you take advantage of a piece of data within a go routine which often times leads to sloppy API or process pipelines for performance. In other words go often times makes it hard to break your programs up for different configurations or processes so this module is like the start of an api for multiprocessing jobs about tiles. 
