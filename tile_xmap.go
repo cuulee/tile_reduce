@@ -213,3 +213,13 @@ func Make_Layer_Rect_Xmap(tile m.TileID, finds []l.Polygon) Tile_Xmap {
 	//ff.WriteString(a)
 	return Tile_Xmap{Tile: tile, Xmap: xmaptotal}
 }
+
+// makes tile index from polygons
+func Make_Tile_Polygon_Index(layer []l.Polygon, size int) {
+	// making tilemap for polygon
+	//layervals := t.Lint_Layer_Polygons(layer)
+	tilemap := Make_Tilemap(layer, size)
+
+	// creating tiles from a given layer
+	Make_Layer_Xmap_Write(tilemap, layer)
+}

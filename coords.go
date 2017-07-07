@@ -1,6 +1,7 @@
 package tile_surge
 
 import (
+	//"fmt"
 	m "github.com/murphy214/mercantile"
 	pc "github.com/murphy214/polyclip"
 	"math"
@@ -37,7 +38,56 @@ func single_point(row pc.Point, bound m.Extrema) []int32 {
 	return []int32{xval, yval}
 }
 
-func Make_Coords(coord []pc.Point, bound m.Extrema) [][]int32 {
+func Make_Coords(coord []pc.Point, bound m.Extrema, tileid m.TileID) [][]int32 {
+	var newlist [][]int32
+	var oldpt []int32
+	east := int32(0)
+	west := int32(4095)
+	south := int32(4095)
+	north := int32(0)
+
+	for ii, i := range coord {
+		pt := single_point(i, bound)
+
+		if ii == 0 {
+			newlist = append(newlist, pt)
+		} else {
+			if ((oldpt[0] == pt[0]) && (oldpt[1] == pt[1])) == false {
+				newlist = append(newlist, pt)
+			}
+		}
+		oldpt = pt
+
+		//
+		if pt[0] > east {
+			east = pt[0]
+		}
+		if pt[0] < west {
+			west = pt[0]
+		}
+
+		if pt[1] < south {
+			south = pt[1]
+		}
+		if pt[1] > north {
+			north = pt[1]
+		}
+	}
+
+	distval := math.Sqrt(math.Pow(math.Abs(float64(east)-float64(west)), 2) + math.Pow(math.Abs(float64(north)-float64(south)), 2))
+	//mt.Print(distval, east, west, north, south, "\n")
+	if len(newlist) == 1 {
+		return [][]int32{}
+	} else if (distval < 16) && (tileid.Z > 10) {
+		//fmt.Print(distval, "\n")
+
+		return [][]int32{}
+	}
+
+	return newlist
+
+}
+func Make_Coords2(coord []pc.Point, bound m.Extrema) [][]int32 {
 	var newlist [][]int32
 	//var oldi []float64
 

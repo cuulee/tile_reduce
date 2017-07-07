@@ -13,11 +13,11 @@ import (
 	l "github.com/murphy214/layersplit"
 	m "github.com/murphy214/mercantile"
 	pc "github.com/murphy214/polyclip"
-	"io"
+	//"io"
 	"io/ioutil"
-	"log"
+	//"log"
 	"os"
-	"path/filepath"
+	//"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -183,7 +183,7 @@ func Make_Tile_Lines(k m.TileID, polys []Line_Edge, fields []string, keysmap map
 
 		// iterating through each polygon alignment
 		// making the geometry
-		geomtile, _ := Make_Line_Geom(Make_Coords(polygon.Line, bd), []int32{0, 0})
+		geomtile, _ := Make_Line_Geom(Make_Coords(polygon.Line, bd, k), []int32{0, 0})
 
 		// if the geometry actually exists within the tile adding the layer
 		if len(geomtile) != 0 {
@@ -218,6 +218,86 @@ func Make_Tile_Lines(k m.TileID, polys []Line_Edge, fields []string, keysmap map
 	return layer
 }
 
+// creates a single tile layer from a polygon
+func Make_Tile_Polygon(k m.TileID, polys []l.Polygon, fields []string, keysmap map[string]uint32, keys []string) vector_tile.Tile_Layer {
+	current := uint32(0)
+
+	// instantiating global tile values
+	var tags []uint32
+	tile_values := []*vector_tile.Tile_Value{}
+	tile_values_map := map[uint64]uint32{}
+	current = uint32(0)
+
+	// getting the filename location of the tile were building within
+
+	// geometry initialization
+	bd := m.Bounds(k)
+	var geomtile []uint32
+	geomtile = []uint32{}
+
+	// feature initializaition
+	features := []*vector_tile.Tile_Feature{}
+	feat_type := vector_tile.Tile_POLYGON
+
+	// getting alignment of current id layer
+	boxpolygon := Make_Tile_Poly(k)
+
+	// in this block of codee im iterating through v the index positons of polygons
+	// fromt he original layer as well as the polygons themselves
+	// this is beccause wwe still have to access the idnex pos to get the tempvals proerpties
+	// for each polygon
+	for _, polygon := range polys {
+		// getting polygon
+		// this is are tempvallist
+		tempval := tile_values_slice(polygon.Properties)
+
+		// adding values to tilemap and tile_values
+		tile_values_map, tile_values, current, tags, _ = Tile_Values_Add_Feature2(tempval, fields, tile_values_map, tile_values, current, keysmap)
+
+		// trimming the polygon by the box shit.
+		polygon.Polygon = polygon.Polygon.Construct(pc.INTERSECTION, boxpolygon)
+
+		// linting the polygon if contains more than two alignments
+		polygons := Lint_Single_Polygon(polygon)
+
+		// iterating through each polygon alignment
+		for _, poly := range polygons {
+			// making the geometry
+			geomtile, _ = Make_Polygon(Make_Coords_Polygon(poly.Polygon, bd), []int32{0, 0})
+
+			// if the geometry actually exists within the tile adding the layer
+			if len(geomtile) != 0 {
+				feat := vector_tile.Tile_Feature{}
+				//fmt.Print(tile_values, "tabs\n")
+				feat.Tags = tags       // this takes of geohash / the geohash value
+				feat.Type = &feat_type // adding the correct feature type
+				// now iterating through each v value
+				// adding geom on
+				feat.Geometry = geomtile
+				features = append(features, &feat)
+				//fmt.Print(tags, len(tile_values), "\n")
+
+			}
+		}
+	}
+
+	//tile := &vector_tile.Tile{}
+	layerVersion := uint32(15)
+	extent := vector_tile.Default_Tile_Layer_Extent
+	//var bound []Bounds
+	layername := polys[0].Layer
+	layer := vector_tile.Tile_Layer{
+		Version:  &layerVersion,
+		Name:     &layername,
+		Extent:   &extent,
+		Values:   tile_values,
+		Keys:     keys,
+		Features: features,
+	}
+
+	return layer
+}
+
 type Layer_Config struct {
 	Layer      []l.Polygon // the name of the database
 	Keymap     map[string]uint32
@@ -228,7 +308,7 @@ type Layer_Config struct {
 }
 
 // creates a layer configuration for a polygon layer
-func Make_Layer_DB(c t.Config) t.Layer_Config {
+func Make_Layer_DB(c Config) Layer_Config {
 	a := pgx.ConnPoolConfig{
 		ConnConfig: pgx.ConnConfig{
 			Host:     c.Host,
@@ -294,7 +374,7 @@ func Make_Layer_DB(c t.Config) t.Layer_Config {
 	// makign the tile layer from the geometry gathered
 	layer := l.Make_Layer_Properties(geoms, c.Database, totalvals)
 
-	return t.Layer_Config{Zooms: c.Zooms, Layer: layer, Keymap: keysmap, Fields: c.Fields}
+	return Layer_Config{Zooms: c.Zooms, Layer: layer, Keymap: keysmap, Fields: c.Fields}
 
 }
 
@@ -355,7 +435,7 @@ func Make_Tile_Layer_Polygon(layerc Layer_Config) {
 			for count < len(tilemap) {
 				select {
 				case msg1 := <-cc:
-					fmt.Printf("Size: %s%d [%d/%d]\n", msg1, zoom, count, len(tilemap))
+					fmt.Printf("\rSize: %s%d [%d/%d]", msg1, zoom, count, len(tilemap))
 				}
 				count += 1
 			}
@@ -369,6 +449,7 @@ func Make_Tile_Layer_Polygon(layerc Layer_Config) {
 			fmt.Print(msg1)
 		}
 	}
+	fmt.Print("\n")
 }
 
 // a line structure
@@ -466,12 +547,11 @@ func Make_Tile_Layer_Line(layerc Layer_Config) {
 	c := make(chan string)
 	//fmt.Print(layer, "layer")
 	for _, zoom := range layerc.Zooms {
-
 		tilemap := Make_Tilemap_Lines(layerc.Line_Layer, zoom)
 		//layer := layerc.Line_Layer
 		//fmt.Print(tilemap, "\n")
 		// this parrelizes the write out for each go function
-		go func(tilemap map[m.TileID][]Line_Edge, c chan string) {
+		go func(tilemap map[m.TileID][]Line_Edge, zoom int, c chan string) {
 			//fmt.Print(len(tilemap), "\n")
 
 			cc := make(chan string)
@@ -503,12 +583,12 @@ func Make_Tile_Layer_Line(layerc Layer_Config) {
 			for count < len(tilemap) {
 				select {
 				case msg1 := <-cc:
-					fmt.Printf("Size: %s%d [%d/%d]\n", msg1, zoom, count, len(tilemap))
+					fmt.Printf("\rSize: %s%d [%d/%d]", msg1, zoom, count, len(tilemap))
 				}
 				count += 1
 			}
 			c <- ""
-		}(tilemap, c)
+		}(tilemap, zoom, c)
 	}
 
 	for range layerc.Zooms {
@@ -517,4 +597,5 @@ func Make_Tile_Layer_Line(layerc Layer_Config) {
 			fmt.Print(msg1)
 		}
 	}
+	fmt.Print("\n")
 }

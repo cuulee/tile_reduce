@@ -383,6 +383,74 @@ func make_edges(line Line, gid string, zoom int) map[m.TileID][]Line_Edge {
 	return tilemap
 }
 
+// functionifying this section so it doesnt get massive pretty decent break point
+func make_edges2(line Line_Edge, zoom int) map[m.TileID][]Line_Edge {
+	count := 0
+	var oldpt, intersectpt pc.Point
+	var tileid, oldtileid m.TileID
+	var bds, oldbds m.Extrema
+	var axis string
+	var tilecoords []pc.Point
+	//var totaltilecoords [][]Point
+	//var mapmeta
+	//var oldrow []float64
+	//axisbeg := "hee"
+	tilemap := map[m.TileID][]Line_Edge{}
+	for _, pt := range line.Line {
+		tileid = m.Tile(pt.X, pt.Y, zoom)
+		bds = m.Bounds(tileid)
+		if count == 0 {
+			count = 1
+			tilecoords = append(tilecoords, pt)
+
+		} else {
+			// shit goes down here
+			// getting the distances between two coordinate points
+			dist := distance_pts(oldpt, pt)
+
+			if tileid != oldtileid {
+				bnddist := distance_bounds(bds)
+
+				// if one of the distances violates or is greater than the distance
+				// for bounds it will be sent into a tile creation function
+				if (bnddist.deltaX < dist.deltaX) || (bnddist.deltaY < dist.deltaY) {
+					// send to tile generation function
+				} else {
+					// otherwise handle normally finding the intersection point and adding in the
+					// the end of tile coords
+					//intersectpt, axis = get_intersection_pt(oldpt, pt, oldbds)
+					axis = which_plane(oldpt, pt, oldbds)
+					intersectpt = itersection_pt(oldpt, pt, oldbds, axis)
+					tilecoords = append(tilecoords, intersectpt)
+					tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: line.Gid, Properties: line.Properties})
+
+					tilecoords = []pc.Point{intersectpt}
+					//axisbeg := opp_axis(axis)
+				}
+			} else {
+				tilecoords = append(tilecoords, oldpt)
+
+			}
+
+			//fmt.Print(tilecoords, "\n")
+			//fmt.Print(distance_pts(oldpt, pt), "\n")
+			//fmt.Print(oldpt, oldtileid, "\n")
+
+		}
+
+		oldpt = pt
+		oldtileid = tileid
+		oldbds = bds
+		//oldrow = row
+	}
+	tilecoords = append(tilecoords, oldpt)
+
+	// account for if all points were in the square
+	tilemap[oldtileid] = append(tilemap[oldtileid], Line_Edge{Line: tilecoords, Gid: line.Gid, Properties: line.Properties})
+
+	return tilemap
+}
+
 func translate(val string) string {
 	if "upper" == val {
 		return "north"
@@ -427,7 +495,7 @@ func Make_Tilemap_Lines(data []Line, size int) map[m.TileID][]Line_Edge {
 	c := make(chan Output_Map)
 	counter := 0
 	totalmap := map[m.TileID][]Line_Edge{}
-	total := 0
+	//total := 0
 	// iterating through each line in csv file
 	for i, row := range data {
 		go func(row Line, size int, c chan Output_Map) {
@@ -435,10 +503,11 @@ func Make_Tilemap_Lines(data []Line, size int) map[m.TileID][]Line_Edge {
 			c <- Output_Map{make_edges(row, istr, size)}
 		}(row, size, c)
 
-		if (counter == 50000) || (len(data)-1 == i) {
+		if (counter == 1000) || (len(data)-1 == i) {
 			count := 0
-			total += counter
-			fmt.Printf("[%d/%d] Getting tilemap, Size: %d\n", total, len(data), size)
+			//total += counter
+
+			//fmt.Printf("[%d/%d] Getting tilemap, Size: %d\n", total, len(data), size)
 			for count < counter {
 				select {
 				case msg1 := <-c:

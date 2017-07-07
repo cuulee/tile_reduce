@@ -25,7 +25,6 @@ package tile_surge
 
 import (
 	//"fmt"
-	"fmt"
 	m "github.com/murphy214/mercantile"
 	geo "github.com/paulmach/go.geo"
 	"math"
@@ -310,7 +309,7 @@ func fix_holes(xmaptotal map[string][]Yrow) map[string][]Yrow {
 
 		for _, row := range newlist {
 			if len(row) == 2 {
-				fmt.Print(row)
+				//fmt.Print(row)
 				if (len(v[row[0]].Range) == 2) && (len(v[row[1]].Range) == 2) {
 					v[row[0]].Range[1] = v[row[1]].Range[0]
 					v[row[1]].Range[0] = v[row[0]].Range[1]
