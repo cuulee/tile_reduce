@@ -47,3 +47,51 @@ There also is geometry simplification which won't reduce processing time but wil
 ### Gzip - Compression
 I can't get mapbox to accept my tile even with the write headers I may try this again later probably just something on my end, its only a few lines of code anyway. 
 
+# Example Polygon
+```go
+package main
+
+import (
+	t "./tile_surge"
+)
+
+func main() {
+	// getting layer configuration
+	c := t.NewConfig("area", "coords", "zip", "polygons", []string{"colorkey"}, []int{2, 3, 4, 5, 6, 7, 8, 9})
+
+	// getting database to be made
+	db := t.Make_Layer_DB(c)
+
+	// making the vector tile with the following configuration.
+	t.Make_Tile_Layer_Polygon(db)
+}
+
+```
+#### Output
+
+![](https://user-images.githubusercontent.com/10904982/27981838-c7f3f1aa-6360-11e7-897f-519113ca1dd0.png)
+
+# Example Lines 
+
+```go
+package main
+
+import (
+	t "./tile_surge"
+)
+
+func main() {
+	// getting layer configuration
+	c := t.NewConfig("gid", "coords", "cal", "lines", []string{"colorkey"}, []int{6, 7, 8, 9, 10, 11, 12})
+
+	// getting database to be made
+	db := t.Make_Layer_DB_Line(c)
+
+	// making the vector tile with the following configuration.
+	t.Make_Tile_Layer_Line(db)
+}
+```
+#### Output
+
+![](https://user-images.githubusercontent.com/10904982/27981879-df61133a-6361-11e7-87ec-447680163d9f.png)
+![](https://user-images.githubusercontent.com/10904982/27981880-df792ff6-6361-11e7-89f8-1a71f912733d.png)
