@@ -117,6 +117,32 @@ func Tile_Values_Add_Feature2(tempval []*vector_tile.Tile_Value, keylist []strin
 	return tile_values_map, tile_values, current, tags, klist
 }
 
+// adds a single geohash feature and maintains position.
+func Tile_Values_Add_Feature3(tempval []*vector_tile.Tile_Value, keylist []string, tile_values_map map[uint64]uint32, tile_values []*vector_tile.Tile_Value, current uint32, keysmap map[string]uint32) (map[uint64]uint32, []*vector_tile.Tile_Value, uint32, []uint32, []string) {
+	tags := []uint32{}
+	klist := []string{}
+	for i, tv := range tempval {
+		var hash uint64
+		k := keylist[i]
+		hash = Hash_Tv(tv)
+		onetag, ok := tile_values_map[hash]
+		if ok == false {
+			tile_values = append(tile_values, tv)
+
+			tile_values_map[hash] = uint32(len(tile_values) - 1)
+			tags = append(tags, uint32(len(tile_values)-1))
+			current = uint32(len(tile_values))
+			//current += 1
+		} else {
+			tags = append(tags, onetag)
+		}
+		//fmt.Print(tags, tile_values, "tags current \n")
+
+		klist = append(klist, k)
+	}
+	return tile_values_map, tile_values, current, tags, klist
+}
+
 // NOTES on geomfield
 // geom field is a field in your database that contains a geojson representation of an alignment in string format
 // however this representation can also encompass multi polygons
@@ -298,6 +324,7 @@ func Make_Tile_Polygon(k m.TileID, polys []l.Polygon, fields []string, keysmap m
 	return layer
 }
 
+// this structure is the interface for which all layers are made.
 type Layer_Config struct {
 	Layer      []l.Polygon // the name of the database
 	Keymap     map[string]uint32
@@ -308,7 +335,7 @@ type Layer_Config struct {
 }
 
 // creates a layer configuration for a polygon layer
-func Make_Layer_DB(c Config) Layer_Config {
+func Make_Layer_DB_Polygon(c Config) Layer_Config {
 	a := pgx.ConnPoolConfig{
 		ConnConfig: pgx.ConnConfig{
 			Host:     c.Host,

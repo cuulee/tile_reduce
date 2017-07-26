@@ -118,6 +118,38 @@ func Make_Layer_Xmap_Write(tilemap map[m.TileID][]int, layer []l.Polygon) []Tile
 	return xmaps
 }
 
+// makes layer line that writes out to a file
+func Make_Layer_Line_Write(tilemap map[m.TileID][]Line_Edge, fields []string, keysmap map[string]uint32) {
+	// iterating through each tileid
+	c := make(chan string)
+	counter := 0
+	totalcount := 0
+	for k, v := range tilemap {
+		go func(k m.TileID, v []Line_Edge, fields []string, keysmap map[string]uint32, c chan<- string) {
+			//fmt.Print("tiles/"+m.Tilestr(xtile.Tile)+".pbf", "\n")
+			Make_Vector_Tile_Line_Index(k, v, fields, keysmap)
+			c <- string("")
+		}(k, v, fields, keysmap, c)
+
+		if (counter == 250) || (len(tilemap)-1 == totalcount) {
+			// iterating through each recieved channel output
+			fmt.Printf("[%d/%d]\n", totalcount, len(tilemap))
+			count := 0
+			for count < counter {
+				select {
+				case msg1 := <-c:
+					fmt.Print(msg1)
+				}
+				count += 1
+			}
+			counter = 0
+		}
+		totalcount += 1
+		counter += 1
+
+	}
+}
+
 func get_polygon(poly pc.Polygon) [][][]float64 {
 	newlist3 := [][][]float64{}
 	for _, cont := range poly {
@@ -214,12 +246,57 @@ func Make_Layer_Rect_Xmap(tile m.TileID, finds []l.Polygon) Tile_Xmap {
 	return Tile_Xmap{Tile: tile, Xmap: xmaptotal}
 }
 
+// lints a polygon layer to add a single layer to the map value
+// this makes it so if the area field doesnt' contain a json stirng
+// which Make_Layer_Xmap_Write expects it corrects to the correct area syntax
+func Lint_Polygon_Layer_Map(layer []l.Polygon) []l.Polygon {
+	var newlayer []l.Polygon
+	for _, feat := range layer {
+		if len(feat.Layers) == 0 {
+			area := feat.Area
+			layer := feat.Layer
+			feat.Area = fmt.Sprintf("{'%s':'%s'}", area, layer)
+		} else {
+			newlist := []string{}
+			for k, v := range feat.Layers {
+				newlist = append(newlist, fmt.Sprintf("'%s':'%s'", k, v))
+			}
+			feat.Area = fmt.Sprintf("{%s}", strings.Join(newlist, ","))
+		}
+		newlayer = append(newlayer, feat)
+
+	}
+	return newlayer
+}
+
 // makes tile index from polygons
-func Make_Tile_Polygon_Index(layer []l.Polygon, size int) {
+func Make_Tile_Polygon_Index(config Layer_Config, size int) {
 	// making tilemap for polygon
 	//layervals := t.Lint_Layer_Polygons(layer)
-	tilemap := Make_Tilemap(layer, size)
+	newlayer := config.Layer
+	firstlayer := config.Layer[0]
+	if string(firstlayer.Area[0]) != "{" {
+		newlayer = Lint_Polygon_Layer_Map(newlayer)
+	}
+
+	tilemap := Make_Tilemap(newlayer, size)
 
 	// creating tiles from a given layer
-	Make_Layer_Xmap_Write(tilemap, layer)
+	Make_Layer_Xmap_Write(tilemap, newlayer)
+}
+
+// makes the tile index from lines
+func Make_Tile_Line_Index(config Layer_Config, zoom int) {
+	// creating tilemap
+	tilemap := Make_Tilemap_Lines(config.Line_Layer, zoom)
+
+	// getting fields
+	fields := config.Fields
+	keysmap := config.Keymap
+
+	// emptying layer config for memory constraints shit
+	config = Layer_Config{}
+
+	// making each line out into a tile line
+	Make_Layer_Line_Write(tilemap, fields, keysmap)
 }
