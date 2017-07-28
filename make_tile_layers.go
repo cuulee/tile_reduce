@@ -158,6 +158,7 @@ type Config struct {
 	ID        string   // id field will usually be gid in postgis database
 	Fields    []string // fields in table to be properties in a feature
 	Zooms     []int    // the zooms you'd like the tiles created at
+	SQL_Query string   // raw sql however will only extract where clause
 }
 
 // creates a new default config
@@ -174,7 +175,7 @@ func NewConfig(idfield string, geomfield string, database string, geomtype strin
 }
 
 // creates a single tile layer from a line
-func Make_Tile_Lines(k m.TileID, polys []Line_Edge, fields []string, keysmap map[string]uint32, keys []string) vector_tile.Tile_Layer {
+func Make_Tile_Lines(k m.TileID, polys []Line_Edge, fields []string, keysmap map[string]uint32, keys []string, prefix string) vector_tile.Tile_Layer {
 	current := uint32(0)
 
 	// instantiating global tile values
@@ -231,7 +232,7 @@ func Make_Tile_Lines(k m.TileID, polys []Line_Edge, fields []string, keysmap map
 	layerVersion := uint32(15)
 	extent := vector_tile.Default_Tile_Layer_Extent
 	//var bound []Bounds
-	layername := "lines"
+	layername := prefix
 	layer := vector_tile.Tile_Layer{
 		Version:  &layerVersion,
 		Name:     &layername,
@@ -522,7 +523,7 @@ func Make_Layer_DB_Line(c Config) Layer_Config {
 
 	// getting the gid and geometr2y field given within the c
 	// this will be used to create the tilemaps going across each zoom.
-	rows, _ := p.Query(fmt.Sprintf("SELECT %s,%s FROM %s", c.ID, c.GeomField, c.Database))
+	rows, _ := p.Query(fmt.Sprintf("SELECT %s,%s FROM %s %s;", c.ID, c.GeomField, c.Database, c.SQL_Query))
 	var geoms [][]string
 	for rows.Next() {
 		_ = rows.Scan(&gid, &geom)
@@ -532,7 +533,7 @@ func Make_Layer_DB_Line(c Config) Layer_Config {
 	//total_tile_values := [][]*vector_tile.Tile_Value{}
 	var totalvals [][]interface{}
 	if len(c.Fields) != 0 {
-		rows, _ = p.Query(fmt.Sprintf("SELECT %s FROM %s", strings.Join(c.Fields, ","), c.Database))
+		rows, _ = p.Query(fmt.Sprintf("SELECT %s FROM %s %s;", strings.Join(c.Fields, ","), c.Database, c.SQL_Query))
 		// getting key maps and shit
 		fdescs := rows.FieldDescriptions()
 		for _, i := range fdescs {
@@ -565,8 +566,12 @@ func Make_Layer_DB_Line(c Config) Layer_Config {
 // this is simply my first actual time doing a complete function like this
 // once i know how to make both individually ill look into combining them.
 func Make_Tile_Layer_Line(layerc Layer_Config) {
+	var prefix string
 	if len(layerc.Prefix) == 0 {
 		layerc.Prefix = "tiles"
+		prefix = "tiles"
+	} else {
+		prefix = layerc.Prefix
 	}
 	//fmt.Print(layer[0], "\n")
 	//fmt.Print(total_tile_values)
@@ -584,12 +589,12 @@ func Make_Tile_Layer_Line(layerc Layer_Config) {
 			cc := make(chan string)
 			for k, polys := range tilemap {
 				// putting the geometries behind a go function to parrelize each tile
-				go func(k m.TileID, polys []Line_Edge, cc chan string) {
+				go func(k m.TileID, polys []Line_Edge, prefix string, cc chan string) {
 					filename := layerc.Prefix + "/" + strconv.Itoa(int(k.Z)) + "/" + strconv.Itoa(int(k.X)) + "/" + strconv.Itoa(int(k.Y))
 					dir := layerc.Prefix + "/" + strconv.Itoa(int(k.Z)) + "/" + strconv.Itoa(int(k.X))
 					os.MkdirAll(dir, os.ModePerm)
 
-					layer := Make_Tile_Lines(k, polys, layerc.Fields, layerc.Keymap, layerc.Fields)
+					layer := Make_Tile_Lines(k, polys, layerc.Fields, layerc.Keymap, layerc.Fields, prefix)
 					//fmt.Print(tile_values, "end\n")
 					//fmt.Print("\n\n\n\n")
 					tile := &vector_tile.Tile{}
@@ -603,7 +608,7 @@ func Make_Tile_Layer_Line(layerc Layer_Config) {
 					ioutil.WriteFile(filename, pbfdata, 0666)
 					cc <- ""
 					//fmt.Print(tile, "\n")
-				}(k, polys, cc)
+				}(k, polys, prefix, cc)
 
 			}
 			count := 0
