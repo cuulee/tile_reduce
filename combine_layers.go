@@ -21,7 +21,7 @@ func add_filemap(searchDir string, filemap map[string][]string, dirmap map[strin
         return nil
     })
     _ = err
-    fmt.Print(fileList)
+    //fmt.Print(fileList)
     for _, file := range fileList {
         vals := strings.Split(file, "/")
         if len(vals) == 4 {
@@ -66,16 +66,26 @@ func read_vt_layer(filename string) *vector_tile.Tile_Layer {
     if err := proto.Unmarshal(in, tile); err != nil {
         log.Fatalln("Failed to parse address book:", err)
     }
+    //fmt.Print(tile, "\n")
     if len(tile.Layers) == 1 {
         return tile.Layers[0]
 
     } else {
-        return &vector_tile.Tile_Layer{}
+        layername := "None"
+        return &vector_tile.Tile_Layer{Name: &layername}
     }
 }
 
+// this structure is designed to hold the key values
+type Key_Values struct {
+    KeyInt  int
+    KeyVal  string
+    ColInts []int
+    ColVals []string
+}
+
 // get update and key values
-func get_key_values(filename string, columns []string) (int, string, []int, []string, string) {
+func get_key_values(filename string, columns []string) map[string]Key_Values {
     // reading in vector tile
     in, _ := ioutil.ReadFile(filename)
     tile := &vector_tile.Tile{}
@@ -83,32 +93,39 @@ func get_key_values(filename string, columns []string) (int, string, []int, []st
         log.Fatalln("Failed to parse address book:", err)
     }
 
-    // getting the keys
-    keys := tile.Layers[0].Keys
+    // creating layermap
+    layermap := map[string]Key_Values{}
 
-    // iterating through the key columns
-    // identifying the positional that the desired values fall under
-    var keyint int
-    var keysint int
-    var colints []int
-    update_columns := []string{}
-    for i, k := range keys {
-        if ("gid" == k) || ("area" == k) {
-            keyint = i*2 + 1
-            keysint = i
-        }
-        for _, col := range columns {
-            if col == k {
-                colints = append(colints, i*2+1)
-                update_columns = append(update_columns, keys[i])
+    // iterating through each layer
+    for _, layer := range tile.Layers {
+        keys := layer.Keys
+        layername := *layer.Name
+        // iterating through the key columns
+        // identifying the positional that the desired values fall under
+        var keyint int
+        var keysint int
+        var colints []int
+        update_columns := []string{}
+        for i, k := range keys {
+            if ("gid" == k) || ("area" == k) {
+                keyint = i*2 + 1
+                keysint = i
+            }
+            for _, col := range columns {
+                if col == k {
+                    colints = append(colints, i*2+1)
+                    update_columns = append(update_columns, keys[i])
+                }
             }
         }
+
+        // getting keyva
+        keyval := keys[keysint]
+
+        // adding layer name and keyvalues to layermap
+        layermap[layername] = Key_Values{KeyInt: keyint, KeyVal: keyval, ColInts: colints, ColVals: update_columns}
     }
-
-    // getting keyva
-    keyval := keys[keysint]
-
-    return keyint, keyval, colints, update_columns, *tile.Layers[0].Name
+    return layermap
 }
 
 // combines the layer prefixs to form one large tile containing all layers
@@ -119,9 +136,10 @@ func Combine_Layer_Prefixs(prefixs []string) {
         filemap, dirmap = add_filemap(prefix, filemap, dirmap)
     }
 
+    fmt.Print(filemap, "\n")
     // creating all the files
     for k := range dirmap {
-        fmt.Print(k, "\n")
+        //fmt.Print(k, "\n")
         os.MkdirAll(k, os.ModePerm)
     }
     c := make(chan string)
@@ -131,13 +149,19 @@ func Combine_Layer_Prefixs(prefixs []string) {
             tile := &vector_tile.Tile{}
 
             tile.Layers = []*vector_tile.Tile_Layer{}
-            for _, filename := range v {
-                //fmt.Print(len(read_vt_layer(filename).Tile_Value), "\n")
-                tile.Layers = append(tile.Layers, read_vt_layer(filename))
-            }
+            if len(v) == 1 {
+                in, _ := ioutil.ReadFile(v[0])
+                ioutil.WriteFile(k, in, 0644)
 
-            pbfdata, _ := proto.Marshal(tile)
-            ioutil.WriteFile(k, []byte(pbfdata), 0644)
+            } else {
+                for _, filename := range v {
+                    //fmt.Print(len(read_vt_layer(filename).Tile_Value), "\n")
+                    tile.Layers = append(tile.Layers, read_vt_layer(filename))
+                }
+
+                pbfdata, _ := proto.Marshal(tile)
+                ioutil.WriteFile(k, []byte(pbfdata), 0644)
+            }
             c <- ""
         }(k, v, c)
     }
@@ -216,36 +240,38 @@ func shit(filemap map[string][]string) map[string][]string {
 // this should probably be put somewhere else however its to much duplicated code to not do this
 func Update_Layer_Values(values map[uint64][]*vector_tile.Tile_Value, prefix string, columns []string) {
     fmt.Print("Starting Layer Updates.\n")
+
     // getting filemap
     filemap := map[string][]string{}
     filemap, filename := add_filemap_file(prefix, filemap, map[string]string{})
 
-    keyint, keyval, colints, update_columns, layername := get_key_values(filename, columns)
+    layermap := get_key_values(filename, columns)
 
     //fmt.Print(keyint, colints)
     c := make(chan string)
-    for _, v := range filemap {
-        go func(v []string, keyint int, colints []int, c chan string) {
-            if len(v) == 1 {
 
-                // reading in the file
-                in, _ := ioutil.ReadFile(v[0])
-                tile := &vector_tile.Tile{}
+    for _, v := range filemap {
+        go func(v []string, layermap map[string]Key_Values, c chan string) {
+            // reading in the file
+            in, _ := ioutil.ReadFile(v[0])
+            tile := &vector_tile.Tile{}
+
+            if len(in) > 10 {
                 if err := proto.Unmarshal(in, tile); err != nil {
                     log.Fatalln("Failed to parse address book:", err)
                 }
 
-                // if for some reason the file is misread read again
-                for len(tile.Layers) == 0 {
-                    in, _ := ioutil.ReadFile(v[0])
-                    tile = &vector_tile.Tile{}
-                    if err := proto.Unmarshal(in, tile); err != nil {
-                        log.Fatalln("Failed to parse address book:", err)
-                    }
-                }
-
+                totaltile := &vector_tile.Tile{}
                 // making sure the file has to layers
-                if len(tile.Layers) > 0 {
+                for _, layer := range tile.Layers {
+                    // getting layer name and layer map
+                    layername := *layer.Name
+                    keyvals := layermap[layername]
+
+                    // getting key int and colints
+                    keyint := keyvals.KeyInt
+                    colints := keyvals.ColInts
+
                     // getting tile values
                     tile_values := tile.Layers[0].Values
 
@@ -310,12 +336,12 @@ func Update_Layer_Values(values map[uint64][]*vector_tile.Tile_Value, prefix str
                         }
 
                     }
+                    tile = &vector_tile.Tile{}
 
                     // finally creating the final vector tile
-                    tile = &vector_tile.Tile{}
                     layerVersion := uint32(15)
                     extent := vector_tile.Default_Tile_Layer_Extent
-                    layername := prefix
+
                     tile.Layers = []*vector_tile.Tile_Layer{
                         {
                             Version:  &layerVersion,
@@ -327,16 +353,17 @@ func Update_Layer_Values(values map[uint64][]*vector_tile.Tile_Value, prefix str
                         },
                     }
 
-                    // as well as outputting the data
-                    pbfdata, _ := proto.Marshal(tile)
-                    ioutil.WriteFile(v[0], pbfdata, 0666)
-
-                } else {
+                    totaltile.Layers = append(totaltile.Layers, tile.Layers[0])
                 }
-            }
 
+            } else {
+
+            }
+            // as well as outputting the data
+            pbfdata, _ := proto.Marshal(tile)
+            ioutil.WriteFile(v[0], pbfdata, 0666)
             c <- ""
-        }(v, keyint, colints, c)
+        }(v, layermap, c)
     }
 
     // collecting the channel
@@ -344,7 +371,7 @@ func Update_Layer_Values(values map[uint64][]*vector_tile.Tile_Value, prefix str
     for range filemap {
         select {
         case msg1 := <-c:
-            fmt.Printf("\tLayer: %s, ID: %s,Updating: %s [%d/%d]%s\r", layername, keyval, update_columns, count, len(filemap), msg1)
+            fmt.Printf("\tUpdating... [%d/%d]%s\r", count, len(filemap), msg1)
         }
         count += 1
     }
