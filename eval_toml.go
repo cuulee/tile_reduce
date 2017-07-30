@@ -1,4 +1,4 @@
-package tile_reduce
+package tile_surge
 
 import (
 	"fmt"
@@ -74,7 +74,7 @@ func Eval_Toml(tomlname string) {
 			}
 
 			// getting config
-			dbconfig := t.Config{
+			dbconfig := Config{
 				Database:  config.DB.Database,     // the name of the database
 				Tablename: config.DB.Tablename,    // the name of the table from the db
 				Port:      uint16(config.DB.Port), // port your sql instance is on
@@ -87,16 +87,16 @@ func Eval_Toml(tomlname string) {
 			}
 
 			// getting line layer with some configuration.s
-			layerconfig := t.Make_Layer_DB_Line(dbconfig)
+			layerconfig := Make_Layer_DB_Line(dbconfig)
 			layerconfig.Prefix = L.Layer
 			prefixs = append(prefixs, L.Layer)
 
 			// logic for using the write method
 			if config.Method == "vector" {
 				// making the tilelayer for each line
-				t.Make_Tile_Layer_Line(layerconfig)
+				Make_Tile_Layer_Line(layerconfig)
 			} else if config.Method == "index" {
-				t.Make_Tile_Line_Index(layerconfig, config.Zoom)
+				Make_Tile_Line_Index(layerconfig, config.Zoom)
 			}
 		}
 	} else if config.DB.LayerType == "polygons" {
@@ -128,16 +128,16 @@ func Eval_Toml(tomlname string) {
 			}
 
 			// getting line layer with some configuration.s
-			layerconfig := t.Make_Layer_DB_Polygon(dbconfig)
+			layerconfig := Make_Layer_DB_Polygon(dbconfig)
 			layerconfig.Prefix = P.Layer
 			prefixs = append(prefixs, P.Layer)
 
 			// logic for using the write method
 			if config.Method == "vector" {
 				// making the tilelayer for each line
-				t.Make_Tile_Layer_Polygon(layerconfig)
+				Make_Tile_Layer_Polygon(layerconfig)
 			} else if config.Method == "index" {
-				t.Make_Tile_Polygon_Index(layerconfig, config.Zoom)
+				Make_Tile_Polygon_Index(layerconfig, config.Zoom)
 			}
 		}
 	}
